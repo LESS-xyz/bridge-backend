@@ -56,7 +56,3 @@ class Scanner(threading.Thread):
 
         except Exception as e:
             print('\n'.join(traceback.format_exception(*sys.exc_info())), flush=True)
-
-
-for network in networks.values():
-    Scanner(network, 'TransferToOtherBlockchain', event_handler).start()
