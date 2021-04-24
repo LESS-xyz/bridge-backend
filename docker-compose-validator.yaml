@@ -1,0 +1,27 @@
+version: "3.8"
+
+services:
+  db:
+    image: postgres
+    env_file: .env
+    volumes:
+      - ./.docker/postgres-data:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      multisig-bridge-validator:
+
+  scanner:
+    env_file: .env
+    build:
+      context: .
+      dockerfile: dockerfiles/scanner.Dockerfile
+    depends_on:
+      - db
+    volumes:
+      - .:/app
+    restart: unless-stopped
+    networks:
+      multisig-bridge-validator:
+
+networks:
+  multisig-bridge-validator:
