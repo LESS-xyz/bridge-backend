@@ -99,6 +99,8 @@ SECRET_KEY = config_data['django_secret_key']
 
 relayers = config_data['relayers']
 
+secret = config_data['private_key']
+
 networks = {}
 for data in config_data['networks']:
     network = munchify(data)

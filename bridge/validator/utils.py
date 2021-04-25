@@ -2,7 +2,7 @@ import requests
 from web3 import Web3
 from eth_account import Account, messages
 from bridge.validator.models import Swap
-from bridge.settings import relayers
+from bridge.settings import relayers, secret
 from datetime import datetime
 
 
@@ -22,7 +22,7 @@ def event_handler(network, event):
     ).hex()
 
     message_to_sign = messages.encode_defunct(hexstr=keccak_hex)
-    signature = Account.sign_message(message_to_sign, private_key=network.private_key)
+    signature = Account.sign_message(message_to_sign, private_key=secret)
     print(signature.signature.hex())
     swap = Swap(
         from_tx_hash=deposit_tx_hash_bytes.hex(),
@@ -31,7 +31,6 @@ def event_handler(network, event):
         to_network_num=args.blockchain,
         to_address=args.newAddress,
         amount=args.amount,
-        relayer_ip='http://' + relayers[0],
         signature=signature.signature.hex()
     )
     swap.save()
@@ -47,7 +46,7 @@ def event_handler(network, event):
             print(response.status_code)
             if response.status_code != 200:
                 continue
-            swap.relayer_url = relayer
+            swap.relayer_ip = relayer
             swap.status = Swap.Status.SIGNATURE_SUBMITTED
             swap.signature_submitted_at = datetime.now()
             swap.save(update_fields=['relayer_url', 'status'])
