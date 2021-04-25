@@ -31,7 +31,7 @@ def event_handler(network, event):
         to_network_num=args.blockchain,
         to_address=args.newAddress,
         amount=args.amount,
-        signature=signature.signature.hex()
+        signature=signature.signature.hex()[2:]
     )
     swap.save()
 
