@@ -18,7 +18,7 @@ def provide_signature(request):
     deposit_hash = validator_data['deposit_tx_hash']
 
     try:
-        swap = Swap.objects.get(from_hash=deposit_hash)
+        swap = Swap.objects.get(from_tx_hash=deposit_hash)
     except Swap.DoesNotExist:
         swap = Swap(
             from_tx_hash=deposit_hash,
