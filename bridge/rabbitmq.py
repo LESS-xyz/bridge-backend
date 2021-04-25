@@ -3,6 +3,7 @@ import os
 import json
 import traceback
 import sys
+import threading
 from importlib import import_module
 
 
@@ -77,7 +78,7 @@ class Broker:
             on_message_callback=self._callback
         )
         print(f'{queue}: queue was started', flush=True)
-        channel.start_consuming()
+        threading.Thread(target=channel.start_consuming).start()
 
 
 broker = Broker(include=['bridge.relayer.tasks, bridge.validator.tasks'])
