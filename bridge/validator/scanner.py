@@ -37,9 +37,10 @@ class Scanner(threading.Thread):
                 last_block_processed = self.network.w3.eth.block_number
             # if path.isfile(filename):
 
-            current_block = self.network.w3.eth.block_number
 
             while True:
+                current_block = self.network.w3.eth.block_number
+
                 if current_block - last_block_processed > MAX_FILTER_LENGTH:
                     to_block = last_block_processed + MAX_FILTER_LENGTH
                 else:
