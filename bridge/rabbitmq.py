@@ -9,7 +9,6 @@ from importlib import import_module
 
 def queue_task(func):
     def to_queue(queue, **kwargs):
-        print(json.dumps(kwargs))
         broker.publish(queue, func.__name__, kwargs)
 
     setattr(func, 'to_queue', to_queue)
