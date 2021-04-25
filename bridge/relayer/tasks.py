@@ -69,12 +69,10 @@ def relay(swap_id):
         signer = Account.recover_message(message_to_sign, signature=sign.signature)
         signer_checksum = Web3.toChecksumAddress(signer)
 
-
-        if network.swap_contract.functinos.isValidator(signer_checksum).call():
+        if network.swap_contract.functions.isValidator(signer_checksum).call():
             validator_signs.append(sign.signature)
 
-
-    if not len(validator_signs) >= network.swap_contract.functinos.minConfirmations().call():
+    if not len(validator_signs) >= network.swap_contract.functions.minConfirmations().call():
         return
 
     combined_singatures = '0x' + ''.join(signs)
