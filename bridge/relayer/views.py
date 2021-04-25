@@ -35,6 +35,8 @@ def provide_signature(request):
     except IntegrityError:
         raise PermissionDenied
 
+    return Response({'result': 'ok'})
+
 
 @api_view(http_method_names=['POST'])
 def is_signature_submitted(request):
