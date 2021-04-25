@@ -15,14 +15,14 @@ from bridge.relayer.models import Swap, Signature
 @api_view(http_method_names=['POST'])
 def provide_signature(request):
     validator_data = request.data
-    deposit_hash = validator_data['deposit_tx_hash']
+    from_tx_hash = validator_data['from_tx_hash']
 
     try:
-        swap = Swap.objects.get(from_tx_hash=deposit_hash)
+        swap = Swap.objects.get(from_tx_hash=from_tx_hash)
     except Swap.DoesNotExist:
         swap = Swap(
-            from_tx_hash=deposit_hash,
-            from_network_num=validator_data['deposit_network_num'],
+            from_tx_hash=from_tx_hash,
+            from_network_num=validator_data['from_network_num'],
         )
         swap.save()
 

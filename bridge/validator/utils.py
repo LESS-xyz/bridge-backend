@@ -37,7 +37,8 @@ def event_handler(network, event):
 
     relayer_payload = {
         'signature': swap.signature,
-        'deposit_tx_hash': swap.from_tx_hash
+        'from_network_num': swap.from_network_num,
+        'from_tx_hash': swap.from_tx_hash,
     }
 
     for relayer in relayers:
@@ -49,7 +50,7 @@ def event_handler(network, event):
             swap.relayer_ip = relayer
             swap.status = Swap.Status.SIGNATURE_SUBMITTED
             swap.signature_submitted_at = datetime.now()
-            swap.save(update_fields=['relayer_url', 'status'])
+            swap.save()
             break
         except Exception as e:
             print('exceptions')
