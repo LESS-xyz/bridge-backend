@@ -8,7 +8,7 @@ class Swap(models.Model):
         WAITING_FOR_SIGNATURES = 'waiting for signatures'
         UNREACHABLE_PROVIDER = 'provider offline'
         IN_MEMPOOL = 'mempool'
-        PENDING = 'success'
+        PENDING = 'pending'
         SUCCESS = 'success'
         FAIL = 'fail'
 
