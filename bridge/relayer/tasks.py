@@ -97,11 +97,12 @@ def relay(swap_id):
         Web3.toBytes(hexstr=combined_singatures)
     )
     initial_tx = func.buildTransaction(tx_params)
-    signed_tx = network.w3.eth.account.sign_transaction(initial_tx, network.private_key).rawTransaction
+    signed_tx = network.w3.eth.account.sign_transaction(initial_tx, secret).rawTransaction
     tx_hash = network.w3.eth.sendRawTransaction(signed_tx)
     tx_hex = tx_hash.hex()
 
     swap.to_tx_hash = tx_hex
+    swap.status = Swap.Status.IN_MEMPOOL
     swap.save()
 
 
