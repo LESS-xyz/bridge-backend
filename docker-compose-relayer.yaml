@@ -30,6 +30,32 @@ services:
     restart: unless-stopped
     networks:
       multisig-bridge-relayer:
+  comsumer:
+    env_file: .env
+    build:
+      context: .
+      dockerfile: dockerfiles/consumer.Dockerfile
+    depends_on:
+      - db
+      - rabbitmq
+    volumes:
+      - .:/app
+    restart: unless-stopped
+    networks:
+      multisig-bridge-relayer:
+  celery:
+    env_file: .env
+    build:
+      context: .
+      dockerfile: dockerfiles/relayer_celery.Dockerfile
+    depends_on:
+      - db
+      - rabbitmq
+    volumes:
+      - .:/app
+    restart: unless-stopped
+    networks:
+      multisig-bridge-relayer:
 
 networks:
   multisig-bridge-relayer:
