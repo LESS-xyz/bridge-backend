@@ -75,7 +75,7 @@ def relay(swap_id):
     if not len(validator_signs) >= network.swap_contract.functions.minConfirmations().call():
         return
 
-    combined_singatures = '0x' + ''.join(signs)
+    combined_singatures = '0x' + ''.join(validator_signs)
 
     gas_price = network.w3.eth.gasPrice
 
