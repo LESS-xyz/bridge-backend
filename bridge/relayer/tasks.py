@@ -79,7 +79,7 @@ def relay(swap_id):
 
     gas_price = network.w3.eth.gasPrice
 
-    relayer_address = Account.from_key(secret)
+    relayer_address = Account.from_key(secret).address
 
     tx_params = {
         'nonce': network.w3.eth.getTransactionCount(relayer_address, 'pending'),
