@@ -27,6 +27,9 @@ class Scanner(threading.Thread):
         try:
             filename = os.path.dirname(__file__) + '/block_numbers/' + self.network.name
 
+            if not os.path.exists(os.path.dirname(__file__) + '/block_numbers/'):
+                os.makedirs(os.path.dirname(__file__) + '/block_numbers/')
+
             try:
                 with open(filename) as f:
                     last_block_processed = int(f.read())
