@@ -92,43 +92,21 @@ STATIC_URL = '/static/'
 MAX_FILTER_LENGTH = 50
 
 
-def get_abi(api_url, api_key, address):
-    url = f'{api_url}api?module=contract&action=getabi&address={address}&apikey={api_key}'
-    return requests.get(url).json()['result']
-
-
 with open(os.path.dirname(__file__) + '/../config.yaml') as f:
     config_data = yaml.safe_load(f)
 
 SECRET_KEY = config_data['django_secret_key']
 
-networks = {}
+relayers = config_data['relayers']
 
+networks = {}
 for data in config_data['networks']:
     network = munchify(data)
     network.w3 = Web3(HTTPProvider(data['node']))
-
-    swap_contract_abi = get_abi(
-        network.explorer_api_url,
-        network.explorer_api_key,
-        network.swap_contract,
+    network.swap_contract = network.w3.eth.contract(
+        address=network.swap_contract_address,
+        abi=network.swap_contract_abi
     )
-    network.swap_contract = network.w3.eth.contract(address=network.swap_contract, abi=swap_contract_abi)
-    '''
-    token_abi = get_abi(network.explorer_api_url, network.explorer_api_key, token_address)
-    token_dict = {}
-    token_address = token_dict['address'] = swap_contract.functions.tokenAddress().call()
-    token_dict['abi'] = 
-
-    token_dict['contract'] = token_contract = w3.eth.contract(address=token_address, abi=token_dict['abi'])
-    token_dict['decimals'] = token_contract.functions.decimals().call()
-    token_dict['symbol'] = token_contract.functions.symbol().call()
-
-    data['swap_contract'] = swap_contract_dict
-    data['token'] = token_dict
-    '''
     networks[network.num] = network
 
-
-relayers = config_data['relayers']
 print('settings loaded')
