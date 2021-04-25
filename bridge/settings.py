@@ -105,7 +105,7 @@ for data in config_data['networks']:
     network.w3 = Web3(HTTPProvider(data['node']))
     network.swap_contract = network.w3.eth.contract(
         address=network.swap_contract_address,
-        abi=network.swap_contract_abi
+        abi=config_data['swap_contract_abi']
     )
     networks[network.num] = network
 
