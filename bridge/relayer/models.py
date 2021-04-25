@@ -3,16 +3,16 @@ from django.db import models
 
 class Swap(models.Model):
     class Status(models.TextChoices):
-        CREATED = 'created'
-        CANNOT_GET_DEPOSIT_PARAMS = 'waiting for getting swap params'
+        WAITING_FOR_VALIDATION = 'waiting for validation'
+        INVALID_TX_HASH = 'invalid tx hash'
         WAITING_FOR_SIGNATURES = 'waiting for signatures'
-        UNREACHABLE_PROVIDER = 'provider offline'
+        WAITING_FOR_RELAY = 'waiting for relay'
         IN_MEMPOOL = 'mempool'
         PENDING = 'pending'
         SUCCESS = 'success'
         FAIL = 'fail'
 
-    status = models.CharField(max_length=100, choices=Status.choices, default=Status.CREATED)
+    status = models.CharField(max_length=100, choices=Status.choices, default=Status.WAITING_FOR_VALIDATION)
 
     created_at = models.DateTimeField(auto_now_add=True)
 
