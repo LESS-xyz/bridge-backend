@@ -61,7 +61,7 @@ def relay(swap_id):
     for sign in signs:
         keccak_hex = Web3.solidityKeccak(
             ['address', 'uint256', 'bytes32'],
-            [Web3.toChecksumAddress(swap.to_address), swap.amount, Web3.toBytes(hexstr=swap.from_tx_hash)]
+            [Web3.toChecksumAddress(swap.to_address), int(swap.amount), Web3.toBytes(hexstr=swap.from_tx_hash)]
         ).hex()
 
         message_to_sign = messages.encode_defunct(hexstr=keccak_hex)
