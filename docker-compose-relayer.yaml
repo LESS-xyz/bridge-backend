@@ -1,0 +1,33 @@
+version: "3.8"
+
+services:
+  db:
+    image: postgres
+    env_file: .env
+    volumes:
+      - ./.docker/postgres-data:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      multisig-bridge-relayer:
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    env_file: .env
+    restart: unless-stopped
+    networks:
+      multisig-bridge-relayer:
+  web:
+    env_file: .env
+    build:
+      context: .
+      dockerfile: dockerfiles/web.Dockerfile
+    depends_on:
+      - db
+      - rabbitmq
+    volumes:
+      - .:/app
+    restart: unless-stopped
+    networks:
+      multisig-bridge-relayer:
+
+networks:
+  multisig-bridge-relayer:
