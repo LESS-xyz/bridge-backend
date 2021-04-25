@@ -25,6 +25,8 @@ services:
       - rabbitmq
     volumes:
       - .:/app
+    ports:
+      - "${DOCKER_EXPOSE_PORT?8000}:8000"
     restart: unless-stopped
     networks:
       multisig-bridge-relayer:
