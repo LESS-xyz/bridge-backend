@@ -23,7 +23,7 @@ class Broker:
 
     def _connection(self):
         return pika.BlockingConnection(pika.ConnectionParameters(
-            'localhost',  # 'rabbitmq',
+            'rabbitmq',
             5672,
             os.getenv('RABBITMQ_DEFAULT_VHOST', 'wish_swap'),
             pika.PlainCredentials(os.getenv('RABBITMQ_DEFAULT_USER', 'wish_swap'),
