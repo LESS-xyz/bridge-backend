@@ -80,4 +80,4 @@ class Broker:
         threading.Thread(target=channel.start_consuming).start()
 
 
-broker = Broker(include=['bridge.relayer.tasks, bridge.validator.tasks'])
+broker = Broker(include=['bridge.relayer.tasks', 'bridge.validator.tasks'])
