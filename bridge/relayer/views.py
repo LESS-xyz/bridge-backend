@@ -10,6 +10,7 @@ from web3 import Web3
 from eth_account.messages import encode_defunct
 from eth_account import Account, messages
 from bridge.relayer.models import Swap, Signature
+from bridge.relayer.tasks import validate_swap
 
 
 @api_view(http_method_names=['POST'])
@@ -34,6 +35,8 @@ def provide_signature(request):
         signature.save()
     except IntegrityError:
         raise PermissionDenied
+
+    validate_swap.delay(swap.id)
 
     return Response({'result': 'ok'})
 

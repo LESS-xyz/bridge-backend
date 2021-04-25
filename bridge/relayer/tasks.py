@@ -35,6 +35,8 @@ def validate_swap(swap_id):
     swap.status = Swap.Status.WAITING_FOR_SIGNATURES
     swap.save()
 
+    check_sign_count.delay(swap.id)
+
 
 @shared_task
 def check_sign_count(swap_id):
