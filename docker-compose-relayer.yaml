@@ -30,7 +30,7 @@ services:
     restart: unless-stopped
     networks:
       multisig-bridge-relayer:
-  comsumer:
+  consumer:
     env_file: .env
     build:
       context: .
