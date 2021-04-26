@@ -57,8 +57,13 @@ def check_sign_count(swap_id):
 
 @queue_task
 def relay(swap_id):
-    print('relay')
+
     swap = Swap.objects.get(id=swap_id)
+    print('relay message recieved:', swap.__dict__)
+
+    if swap.status != Swap.Status.WAITING_FOR_RELAY:
+        print('invalid status')
+        return
 
     pending_swaps = Swap.objects.filter(
         to_network_num=swap.to_network_num,
