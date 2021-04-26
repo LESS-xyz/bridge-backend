@@ -6,7 +6,7 @@ from bridge.settings import relayers, secret
 from datetime import datetime
 
 
-def event_handler(network, event):
+def deposit_event_handler(network, event):
     args = event['args']
 
     recipient_address = args.newAddress
@@ -24,6 +24,7 @@ def event_handler(network, event):
     message_to_sign = messages.encode_defunct(hexstr=keccak_hex)
     signature = Account.sign_message(message_to_sign, private_key=secret)
     print(signature.signature.hex())
+
     swap = Swap(
         from_tx_hash=deposit_tx_hash_bytes.hex(),
         from_network_num=network.num,

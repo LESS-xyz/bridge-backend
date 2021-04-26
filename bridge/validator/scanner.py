@@ -13,7 +13,6 @@ django.setup()
 
 from bridge.settings import networks, MAX_FILTER_LENGTH
 from bridge.validator.models import Swap
-from bridge.validator.utils import event_handler
 
 
 class Scanner(threading.Thread):
@@ -25,18 +24,20 @@ class Scanner(threading.Thread):
 
     def run(self):
         try:
-            filename = os.path.dirname(__file__) + '/block_numbers/' + self.network.name
-
-            if not os.path.exists(os.path.dirname(__file__) + '/block_numbers/'):
-                os.makedirs(os.path.dirname(__file__) + '/block_numbers/')
+            dir_path = os.path.join(os.path.dirname(__file__), 'block_numbers')
 
             try:
-                with open(filename) as f:
+                os.makedirs(dir_path)
+            except FileExistsError:
+                pass
+
+            block_file_path = os.path.join(dir_path, self.network.name)
+
+            try:
+                with open(block_file_path) as f:
                     last_block_processed = int(f.read())
             except Exception:
                 last_block_processed = self.network.w3.eth.block_number
-            # if path.isfile(filename):
-
 
             while True:
                 current_block = self.network.w3.eth.block_number
@@ -53,7 +54,7 @@ class Scanner(threading.Thread):
                     self.handler(self.network, event)
                 last_block_processed = to_block
 
-                with open(filename, 'w') as f:
+                with open(block_file_path, 'w') as f:
                     f.write(str(last_block_processed))
 
                 time.sleep(10)
