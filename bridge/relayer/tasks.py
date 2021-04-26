@@ -7,12 +7,11 @@ from web3 import Web3
 from eth_account import Account, messages
 from web3.exceptions import TransactionNotFound
 from datetime import datetime
+from django.db import transaction
 
 
-@app.task
-def validate_swap(swap_id):
+def validate_swap(swap):
     print('validate_swap')
-    swap = Swap.objects.get(id=swap_id)
     from_network = networks[swap.from_network_num]
 
     try:
@@ -38,13 +37,11 @@ def validate_swap(swap_id):
     swap.status = Swap.Status.WAITING_FOR_SIGNATURES
     swap.save()
 
-    check_sign_count.delay(swap.id)
+    check_swap.delay(swap.id)
 
 
-@app.task
-def check_sign_count(swap_id):
+def check_sign_count(swap):
     print('check sign count')
-    swap = Swap.objects.get(id=swap_id)
     signs = Signature.objects.filter(swap=swap)
 
     network = networks[swap.to_network_num]
@@ -52,12 +49,11 @@ def check_sign_count(swap_id):
     if signs.count() >= network.swap_contract.functions.minConfirmationSignatures().call():
         swap.status = Swap.Status.WAITING_FOR_RELAY
         swap.save(update_fields=['status'])
-        relay.to_queue(queue=network.name, swap_id=swap_id)
+        relay.to_queue(queue=network.name, swap_id=swap.id)
 
 
 @queue_task
 def relay(swap_id):
-
     swap = Swap.objects.get(id=swap_id)
     print('relay message recieved:', swap.__dict__)
 
@@ -129,10 +125,8 @@ def relay(swap_id):
     swap.save()
 
 
-@app.task
-def check_swap_status_in_blockchain(swap_id):
+def check_swap_status_in_blockchain(swap):
     print('check swap status in blockchin')
-    swap = Swap.objects.get(id=swap_id)
 
     if swap.status not in (Swap.Status.IN_MEMPOOL, Swap.Status.PENDING):
         return
@@ -157,18 +151,27 @@ def check_swap_status_in_blockchain(swap_id):
     swap.save()
 
 
+@transaction.atomic
+@app.task
+def check_swap(swap_id):
+    print('check swap')
+    swap = Swap.objects.select_for_update().get(id=swap_id)
+
+    if swap.status == Swap.Status.WAITING_FOR_VALIDATION:
+        validate_swap.delay(swap.id)
+    elif swap.status == Swap.Status.WAITING_FOR_SIGNATURES:
+        check_sign_count.delay(swap.id)
+    elif swap.status == Swap.Status.WAITING_FOR_RELAY:
+        network = networks[swap.to_network_num]
+        relay.to_queue(queue=network.name, swap_id=swap.id)
+    elif swap.status in (Swap.Status.IN_MEMPOOL, Swap.Status.PENDING):
+        check_swap_status_in_blockchain.delay(swap.id)
+
+
 @shared_task
 def check_swaps():
     print('check swaps')
     swaps = Swap.objects.all()
 
     for swap in swaps:
-        if swap.status == Swap.Status.WAITING_FOR_VALIDATION:
-            validate_swap.delay(swap.id)
-        elif swap.status == Swap.Status.WAITING_FOR_SIGNATURES:
-            check_sign_count.delay(swap.id)
-        elif swap.status == Swap.Status.WAITING_FOR_RELAY:
-            network = networks[swap.to_network_num]
-            relay.to_queue(queue=network.name, swap_id=swap.id)
-        elif swap.status in (Swap.Status.IN_MEMPOOL, Swap.Status.PENDING):
-            check_swap_status_in_blockchain.delay(swap.id)
+        check_swap.delay(swap.id)
