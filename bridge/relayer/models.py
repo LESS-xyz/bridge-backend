@@ -10,6 +10,7 @@ class Swap(models.Model):
         IN_MEMPOOL = 'mempool'
         PENDING = 'pending'
         SUCCESS = 'success'
+        REVERT = 'revert'
         FAIL = 'fail'
 
     status = models.CharField(max_length=100, choices=Status.choices, default=Status.WAITING_FOR_VALIDATION)

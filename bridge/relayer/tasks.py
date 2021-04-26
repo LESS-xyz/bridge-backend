@@ -1,13 +1,15 @@
 from bridge.rabbitmq import queue_task
 from celery import shared_task
+from relayer_celery import app
 from bridge.relayer.models import Swap, Signature
 from bridge.settings import networks, secret
 from web3 import Web3
 from eth_account import Account, messages
 from web3.exceptions import TransactionNotFound
+from datetime import datetime
 
 
-@shared_task
+@app.task
 def validate_swap(swap_id):
     swap = Swap.objects.get(id=swap_id)
     from_network = networks[swap.from_network_num]
@@ -38,7 +40,7 @@ def validate_swap(swap_id):
     check_sign_count.delay(swap.id)
 
 
-@shared_task
+@app.task
 def check_sign_count(swap_id):
     swap = Swap.objects.get(id=swap_id)
     signs = Signature.objects.filter(swap=swap)
@@ -51,10 +53,19 @@ def check_sign_count(swap_id):
         relay.to_queue(queue=network.name, swap_id=swap_id)
 
 
-
 @queue_task
 def relay(swap_id):
     swap = Swap.objects.get(id=swap_id)
+
+    pending_swaps = Swap.objects.filter(
+        to_network_num=swap.to_network_num,
+        status__in=(Swap.Status.IN_MEMPOOL, Swap.Status.PENDING)
+    )
+
+    if pending_swaps.count():
+        print('queue locked')
+        return
+
     signs = Signature.objects.filter(swap=swap)
 
     network = networks[swap.to_network_num]
@@ -102,7 +113,35 @@ def relay(swap_id):
     tx_hex = tx_hash.hex()
 
     swap.to_tx_hash = tx_hex
+    swap.relayed_to_blockchain_at = datetime.now()
     swap.status = Swap.Status.IN_MEMPOOL
+    swap.save()
+
+
+@app.task
+def check_swap_status_in_blockchain(swap_id):
+    swap = Swap.objects.get(id=swap_id)
+
+    if swap.status not in (Swap.Status.IN_MEMPOOL, Swap.Status.PENDING):
+        return
+
+    network = networks[swap.to_network_num]
+
+    try:
+        receipt = network.w3.eth.getTransactionReceipt(swap.to_tx_hash)
+    except TransactionNotFound:
+        return
+
+    try:
+        if receipt['status'] == 1:
+            swap.status = Swap.Status.SUCCESS
+        elif receipt['blockNumber'] is None:
+            swap.status = Swap.Status.PENDING
+        else:
+            swap.status = Swap.Status.REVERT
+    except KeyError:
+        swap.status = Swap.Status.IN_MEMPOOL
+
     swap.save()
 
 
@@ -118,3 +157,5 @@ def check_swaps():
         elif swap.status == Swap.Status.WAITING_FOR_RELAY:
             network = networks[swap.to_network_num]
             relay.to_queue(queue=network.name, swap_id=swap.id)
+        elif swap.status in (Swap.Status.IN_MEMPOOL, Swap.Status.PENDING):
+            check_swap_status_in_blockchain.delay(swap.id)
