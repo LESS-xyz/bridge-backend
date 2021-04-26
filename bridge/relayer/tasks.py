@@ -151,21 +151,21 @@ def check_swap_status_in_blockchain(swap):
     swap.save()
 
 
-@transaction.atomic
 @app.task
+@transaction.atomic
 def check_swap(swap_id):
     print('check swap')
     swap = Swap.objects.select_for_update().get(id=swap_id)
 
     if swap.status == Swap.Status.WAITING_FOR_VALIDATION:
-        validate_swap.delay(swap.id)
+        validate_swap(swap)
     elif swap.status == Swap.Status.WAITING_FOR_SIGNATURES:
-        check_sign_count.delay(swap.id)
+        check_sign_count(swap)
     elif swap.status == Swap.Status.WAITING_FOR_RELAY:
         network = networks[swap.to_network_num]
         relay.to_queue(queue=network.name, swap_id=swap.id)
     elif swap.status in (Swap.Status.IN_MEMPOOL, Swap.Status.PENDING):
-        check_swap_status_in_blockchain.delay(swap.id)
+        check_swap_status_in_blockchain(swap)
 
 
 @shared_task
