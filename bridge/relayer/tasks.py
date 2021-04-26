@@ -11,6 +11,7 @@ from datetime import datetime
 
 @app.task
 def validate_swap(swap_id):
+    print('validate_swap')
     swap = Swap.objects.get(id=swap_id)
     from_network = networks[swap.from_network_num]
 
@@ -42,6 +43,7 @@ def validate_swap(swap_id):
 
 @app.task
 def check_sign_count(swap_id):
+    print('check sign count')
     swap = Swap.objects.get(id=swap_id)
     signs = Signature.objects.filter(swap=swap)
 
@@ -55,6 +57,7 @@ def check_sign_count(swap_id):
 
 @queue_task
 def relay(swap_id):
+    print('relay')
     swap = Swap.objects.get(id=swap_id)
 
     pending_swaps = Swap.objects.filter(
@@ -123,6 +126,7 @@ def relay(swap_id):
 
 @app.task
 def check_swap_status_in_blockchain(swap_id):
+    print('check swap status in blockchin')
     swap = Swap.objects.get(id=swap_id)
 
     if swap.status not in (Swap.Status.IN_MEMPOOL, Swap.Status.PENDING):
@@ -150,6 +154,7 @@ def check_swap_status_in_blockchain(swap_id):
 
 @shared_task
 def check_swaps():
+    print('check swaps')
     swaps = Swap.objects.all()
 
     for swap in swaps:
