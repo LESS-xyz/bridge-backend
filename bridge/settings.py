@@ -3,6 +3,7 @@ import yaml
 import requests
 from munch import munchify
 from web3 import Web3, HTTPProvider
+from django.core.management.utils import get_random_secret_key
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -96,7 +97,7 @@ MAX_FILTER_LENGTH = 50
 with open(os.path.dirname(__file__) + '/../config.yaml') as f:
     config_data = yaml.safe_load(f)
 
-SECRET_KEY = config_data['django_secret_key']
+SECRET_KEY = get_random_secret_key()
 
 relayers = config_data['relayers']
 
