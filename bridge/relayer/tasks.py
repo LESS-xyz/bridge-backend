@@ -47,7 +47,7 @@ def check_sign_count(swap_id):
 
     network = networks[swap.to_network_num]
 
-    if signs.count() >= network.swap_contract.functions.minConfirmations().call():
+    if signs.count() >= network.swap_contract.functions.minConfirmationSignatures().call():
         swap.status = Swap.Status.WAITING_FOR_RELAY
         swap.save(update_fields=['status'])
         relay.to_queue(queue=network.name, swap_id=swap_id)
@@ -86,12 +86,15 @@ def relay(swap_id):
         if network.swap_contract.functions.isValidator(signer_checksum).call():
             validator_signs.append(sign.signature)
 
-    if not len(validator_signs) >= network.swap_contract.functions.minConfirmations().call():
+    if len(validator_signs) < network.swap_contract.functions.minConfirmationSignatures().call():
         return
 
     combined_singatures = '0x' + ''.join(validator_signs)
 
     gas_price = network.w3.eth.gasPrice
+    max_gas_price = network.swap_contract.functions.maxGasPrice().call()
+    if gas_price > max_gas_price:
+        return
 
     relayer_address = Account.from_key(secret).address
 
