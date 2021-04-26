@@ -3,16 +3,12 @@ import traceback
 import sys
 import os
 import time
-from os import path
-from web3 import Web3
-from eth_account import Account, messages
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'bridge.settings')
 import django
 django.setup()
 
-from bridge.settings import networks, MAX_FILTER_LENGTH
-from bridge.validator.models import Swap
+from bridge.settings import MAX_FILTER_LENGTH
 
 
 class Scanner(threading.Thread):
@@ -47,7 +43,7 @@ class Scanner(threading.Thread):
                 else:
                     to_block = current_block
 
-                event_filter = self.event.createFilter(fromBlock=last_block_processed, toBlock=to_block)
+                event_filter = self.event.createFilter(fromBlock=last_block_processed + 1, toBlock=to_block)
                 print(self.network.name + ': scanning...')
                 events = event_filter.get_all_entries()
                 for event in events:
