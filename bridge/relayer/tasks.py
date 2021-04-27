@@ -80,11 +80,13 @@ def relay(swap):
     network = networks[swap.to_network_num]
     amount = int(swap.amount)
 
+    to_address_checksum = Web3.toChecksumAddress(swap.to_address)
+
     validator_signs = []
     for sign in signs:
         keccak_hex = Web3.solidityKeccak(
             ['address', 'uint256', 'bytes32'],
-            [Web3.toChecksumAddress(swap.to_address), amount, Web3.toBytes(hexstr=swap.from_tx_hash)]
+            [to_address_checksum, amount, Web3.toBytes(hexstr=swap.from_tx_hash)]
         ).hex()
 
         message_to_sign = messages.encode_defunct(hexstr=keccak_hex)
@@ -114,7 +116,7 @@ def relay(swap):
     }
 
     func = network.swap_contract.functions.transferToUserWithFee(
-        swap.to_address,
+        to_address_checksum,
         amount,
         Web3.toBytes(hexstr=swap.from_tx_hash),
         Web3.toBytes(hexstr=combined_singatures)
