@@ -33,17 +33,21 @@ class Scanner(threading.Thread):
                 with open(block_file_path) as f:
                     last_block_processed = int(f.read())
             except Exception:
-                last_block_processed = self.network.w3.eth.block_number
+                last_block_processed = self.network.w3.eth.block_number - 1
 
             while True:
                 current_block = self.network.w3.eth.block_number
+                if last_block_processed == current_block:
+                    print(self.network.name + ': waiting for blocks...')
+                    return
 
                 if current_block - last_block_processed > MAX_FILTER_LENGTH:
                     to_block = last_block_processed + MAX_FILTER_LENGTH
                 else:
                     to_block = current_block
 
-                event_filter = self.event.createFilter(fromBlock=last_block_processed + 1, toBlock=to_block)
+                event_filter = self.event.createFilter(fromBlock=last_block_processed+1, toBlock=to_block)
+
                 print(self.network.name + ': scanning...')
                 events = event_filter.get_all_entries()
                 for event in events:
