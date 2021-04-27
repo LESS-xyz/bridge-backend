@@ -6,16 +6,16 @@ networks:
     symbol: ETH
     num: 2
     node: {{ worker_eth_node_url }}
-    swap_contract_address: {{ eth_swap_contract_address }}
+    swap_contract_address: '{{ eth_swap_contract_address }}'
   - name: smart_chain
     decimals: 18
     symbol: BNB
     num: 1
     node: {{ worker_bsc_node_url }}
-    swap_contract_address: {{ bsc_swap_contract_address }}
+    swap_contract_address: '{{ bsc_swap_contract_address }}'
 
 relayers:
   {{ relayers }}
 
-private_key: {{ worker_private_key }}
-swap_contract_abi: {{ swap_contract_abi }}
+private_key: '{{ worker_private_key }}'
+swap_contract_abi: '{{ swap_contract_abi }}'
