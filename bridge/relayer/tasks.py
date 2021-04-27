@@ -8,6 +8,7 @@ from web3.exceptions import TransactionNotFound
 from datetime import datetime
 from django.db import transaction
 from django.db.utils import OperationalError
+from bridge.rabbitmq import queue_task
 
 
 def validate_swap(swap):
@@ -52,6 +53,7 @@ def check_sign_count(swap):
         relay.to_queue(queue=network.name, swap_id=swap.id)
 
 
+@queue_task
 def relay(swap):
     print('relay message recieved:', swap.__dict__)
 
