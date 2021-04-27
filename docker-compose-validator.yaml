@@ -17,6 +17,26 @@ services:
       dockerfile: dockerfiles/scanner.Dockerfile
     depends_on:
       - db
+      - rabbitmq
+    volumes:
+      - .:/app
+    restart: unless-stopped
+    networks:
+      multisig-bridge-validator:
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    env_file: .env
+    restart: unless-stopped
+    networks:
+      multisig-bridge-validator:
+  celery:
+    env_file: .env
+    build:
+      context: .
+      dockerfile: dockerfiles/validator_celery.Dockerfile
+    depends_on:
+      - db
+      - rabbitmq
     volumes:
       - .:/app
     restart: unless-stopped

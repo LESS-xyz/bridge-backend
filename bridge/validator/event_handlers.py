@@ -4,12 +4,13 @@ from eth_account import Account, messages
 from bridge.validator.models import Swap
 from bridge.settings import relayers, secret
 from datetime import datetime
+from bridge.validator.tasks import check_swap
 
 
 def deposit_event_handler(network, event):
     args = event['args']
 
-    recipient_address = args.newAddress
+    recipient_address = Web3.toChecksumAddress(args.newAddress)
     deposit_tx_hash_bytes = event.transactionHash
     amount = args.amount
 
@@ -36,29 +37,4 @@ def deposit_event_handler(network, event):
     )
     swap.save()
 
-    relayer_payload = {
-        'signature': swap.signature,
-        'from_network_num': swap.from_network_num,
-        'from_tx_hash': swap.from_tx_hash,
-    }
-
-    for relayer in relayers:
-        try:
-            response = requests.post('http://' + relayer + '/provide_signature/', json=relayer_payload)
-            print(response.status_code)
-            if response.status_code != 200:
-                continue
-            swap.relayer_ip = relayer
-            swap.status = Swap.Status.SIGNATURE_SUBMITTED
-            swap.signature_submitted_at = datetime.now()
-            swap.save()
-            break
-        except Exception as e:
-            print('exceptions')
-            print(repr(e))
-            pass
-    else:
-        swap.status = Swap.Status.RELAYERS_OFFLINE
-        swap.save(update_fields=['status'])
-
-    #address = Account.recover_message(message_to_sign, signature=signature.signature.hex())
+    check_swap.delay(swap.id)
