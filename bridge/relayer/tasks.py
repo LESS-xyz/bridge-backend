@@ -1,4 +1,3 @@
-from bridge.rabbitmq import queue_task
 from celery import shared_task
 from relayer_celery import app
 from bridge.relayer.models import Swap, Signature
@@ -8,6 +7,7 @@ from eth_account import Account, messages
 from web3.exceptions import TransactionNotFound
 from datetime import datetime
 from django.db import transaction
+from django.db.utils import OperationalError
 
 
 def validate_swap(swap):
@@ -52,9 +52,7 @@ def check_sign_count(swap):
         relay.to_queue(queue=network.name, swap_id=swap.id)
 
 
-@queue_task
-def relay(swap_id):
-    swap = Swap.objects.get(id=swap_id)
+def relay(swap):
     print('relay message recieved:', swap.__dict__)
 
     if swap.status != Swap.Status.WAITING_FOR_RELAY:
@@ -155,7 +153,11 @@ def check_swap_status_in_blockchain(swap):
 @transaction.atomic
 def check_swap(swap_id):
     print('check swap')
-    swap = Swap.objects.select_for_update().get(id=swap_id)
+    try:
+        swap = Swap.objects.select_for_update(nowait=True).get(id=swap_id)
+    except OperationalError:
+        print('swap model locked')
+        return
 
     if swap.status == Swap.Status.WAITING_FOR_VALIDATION:
         validate_swap(swap)
