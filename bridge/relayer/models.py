@@ -1,6 +1,10 @@
 from django.db import models
 
 
+class NetworkLock(models.Model):
+    network_num = models.IntegerField()
+
+
 class Swap(models.Model):
     class Status(models.TextChoices):
         WAITING_FOR_VALIDATION = 'waiting for validation'
