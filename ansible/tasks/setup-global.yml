@@ -1,0 +1,36 @@
+- name: Setup common backend configurations
+  hosts: all
+  vars_files:
+    - "../vars/environment.yml"
+    - "../vars/config-global.yml"
+
+
+  tasks:  
+    #- name: Create project directory on server
+    - name: Sync project directory to server
+      ansible.posix.synchronize:
+        src: "{{ local_project_path }}"
+        dest: "{{ worker_home_path }}"
+        rsync_opts:
+         - "--exclude=deploy-files"
+         - "--exclude=.git"
+         - "--exclude=.gitignore"
+         - "--exclude=.env"
+
+    - name: Set env file
+      template: 
+        src: ../templates/env.j2
+        dest: "{{ worker_home_path}}/multisig_bridge/.env"
+        owner: root
+        group: root
+        mode: 0644
+    
+    - name: Set config
+      template: 
+        src: ../templates/config.yaml.j2
+        dest: "{{ worker_home_path}}/multisig_bridge/config.yaml"
+        owner: root
+        group: root
+        mode: 0644
+        
+    

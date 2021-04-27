@@ -1,0 +1,126 @@
+---
+- name: Install deployment dependencies
+  hosts: all
+  # become: yes
+  # become_method: sudo
+  
+  tasks:
+    - name: Docker - Check if Docker is installed
+      command: systemctl status docker
+      register: docker_check
+      ignore_errors: yes
+
+    - name: Docker - Download the Docker installer
+      get_url:
+        url: https://get.docker.com/
+        dest: /root/install_docker.sh
+        mode: 0700
+      when: docker_check.stderr.find('docker.service could not be found') != -1
+
+    - name: Docker - Install Docker
+      shell: /root/install_docker.sh
+      when: docker_check.stderr.find('service could not be found') != -1
+
+    - name: Docker - Remove the Docker installer file.
+      file:
+        state: absent
+        path: /root/install_docker.sh
+
+    - name: Docker - Enable the Docker daemon in systemd
+      systemd:
+        name: docker
+        enabled: yes
+        masked: no
+
+    - name: Docker - Start the Docker daemon
+      systemd:
+        name: docker
+        state: started
+        masked: no
+
+    - name: Docker Compose - Check if Docker Compose is installed
+      command: docker-compose --version
+      register: docker_compose_check
+      ignore_errors: yes
+
+    - name: Docker Compose - Download and install Docker Compose
+      get_url:
+        url: https://github.com/docker/compose/releases/download/1.28.2/docker-compose-Linux-{{ ansible_userspace_architecture }}
+        dest: /usr/bin/docker-compose
+        mode: 0755
+      when:
+        - docker_compose_check.msg is defined
+        - docker_compose_check.msg.find('No such file or directory') != -1
+      
+    - name: Systemd - Restart Docker daemon
+      systemd:
+        name: docker
+        state: restarted
+    
+    - name: Yum - Install Nginx
+      yum:
+        name: nginx
+        state: present
+
+    - name: Systemd - Enable firewalld service
+      systemd:
+        name: nginx
+        state: started
+        enabled: yes
+
+    - name: Yum - Install firewalld
+      yum:
+        name: firewalld
+        state: present
+
+    - name: Systemd - Enable firewalld service
+      systemd:
+        name: firewalld
+        state: started
+        enabled: yes
+
+    - name: FirewallD - Enable SSH
+      shell: firewall-cmd --add-service=ssh
+
+    - name: FirewallD - Enable 8000 port
+      shell: firewall-cmd --add-port=8000/tcp
+
+    - name: FirewallD - Make configuration permanent
+      shell: firewall-cmd --runtime-to-permanent
+
+    - name: Yum - Install Rsync
+      yum:
+        name: rsync
+        state: present
+
+    - name: Yum - Install Git
+      yum:
+        name: git
+        state: present
+
+    - name: Yum - Install Vim
+      yum:
+        name: vim
+        state: present
+
+    - name: Yum - Install Python3 devel
+      yum:
+        name: python3-devel
+        state: present
+
+    - name: Pip - upgrade pip
+      pip:
+        name: pip
+        state: latest
+
+    - name: Pip - install Docker
+      pip:
+        name: docker
+        state: latest
+
+    - name: Pip - install Docker Compose
+      pip:
+        name: docker-compose
+      
+    
+        

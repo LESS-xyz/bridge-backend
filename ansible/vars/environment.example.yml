@@ -1,0 +1,16 @@
+local_project_path: /home/user/multisig_bridge
+worker_home_path: /root/
+
+docker_expose_port: 8000
+django_port: 8000
+# django_allowed_hosts: 127.0.0.1
+
+postgres_db: multisig_bridge
+postgres_user: multisig_bridge
+postgres_password: multisig_bridge
+postgres_host: db
+postgres_port: 5432
+
+rabbitmq_default_user: rabbit
+rabbitmq_default_pass: rabbit
+rabbitmq_default_vhost: rabbit

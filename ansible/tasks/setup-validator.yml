@@ -1,0 +1,44 @@
+- name: Build and deploy validator node
+  hosts: validators
+  vars_files:
+  - "../vars/environment.yml"
+
+  tasks:
+    - name: Tear down existing services
+      docker_compose:
+        project_src: "{{ worker_home_path }}/multisig_bridge"
+        files: docker-compose-validator.yaml
+        state: absent
+
+    - name: Create and start services
+      docker_compose:
+        project_src: "{{ worker_home_path }}/multisig_bridge"
+        files: docker-compose-validator.yaml
+
+    - name: Make migrations
+      command: 
+        cmd: > 
+          docker-compose 
+          -f {{ worker_home_path}}/multisig_bridge/docker-compose-validator.yaml 
+          exec scanner python manage.py makemigrations relayer
+
+    - name: Make migrations
+      command: 
+        cmd: > 
+          docker-compose 
+          -f {{ worker_home_path}}/multisig_bridge/docker-compose-validator.yaml 
+          exec scanner python manage.py makemigrations validator
+
+    - name: Migrate DB
+      command: 
+        cmd: > 
+          docker-compose 
+          -f {{ worker_home_path}}/multisig_bridge/docker-compose-validator.yaml 
+          exec scanner python manage.py migrate
+
+    - name: Create and start services
+      docker_compose:
+        project_src: "{{ worker_home_path }}/multisig_bridge"
+        files: docker-compose-validator.yaml
+        restarted: yes
+      

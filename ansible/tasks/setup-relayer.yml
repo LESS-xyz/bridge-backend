@@ -1,0 +1,44 @@
+- name: Build and deploy relayer node
+  hosts: relayers
+  vars_files:
+  - "../vars/environment.yml"
+
+  tasks:
+    - name: Tear down existing services
+      docker_compose:
+        project_src: "{{ worker_home_path }}/multisig_bridge"
+        files: docker-compose-relayer.yaml
+        state: absent
+
+    - name: Create and start services
+      docker_compose:
+        project_src: "{{ worker_home_path }}/multisig_bridge"
+        files: docker-compose-relayer.yaml
+
+    - name: Make migrations
+      command: 
+        cmd: > 
+          docker-compose 
+          -f {{ worker_home_path}}/multisig_bridge/docker-compose-relayer.yaml 
+          exec web python manage.py makemigrations relayer
+
+    - name: Make migrations
+      command: 
+        cmd: > 
+          docker-compose 
+          -f {{ worker_home_path}}/multisig_bridge/docker-compose-relayer.yaml 
+          exec web python manage.py makemigrations validator
+
+    - name: Migrate DB
+      command: 
+        cmd: > 
+          docker-compose 
+          -f {{ worker_home_path}}/multisig_bridge/docker-compose-relayer.yaml 
+          exec web python manage.py migrate
+
+    - name: Create and start services
+      docker_compose:
+        project_src: "{{ worker_home_path }}/multisig_bridge"
+        files: docker-compose-relayer.yaml
+        restarted: yes
+      

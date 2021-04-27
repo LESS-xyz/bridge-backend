@@ -6,3 +6,7 @@
 /__pycache__/
 /*/__pycache__/
 /*/*/__pycache__/
+
+ansible/hosts.yml
+ansible/vars/config-global.yml
+ansible/vars/environment.yml

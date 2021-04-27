@@ -1,0 +1,34 @@
+all:
+  vars:
+    # Global ansible setting 
+    ansible_user:
+      root
+
+
+validators:
+  hosts:
+    validator1:
+      ansible_host: validator1.bridge.io
+      worker_private_key: "privkeystr"
+    validator2:
+      ansible_host: validator2.bridge.io
+      worker_private_key: "privkeystr"
+      worker_eth_node_url: https://mainnet.infura.io/v3/infura_project_id
+    validator3:
+      ansible_host: validator3.bridge.io
+      worker_private_key: "privkeystr"
+      worker_eth_node_url: https://mainnet.infura.io/v3/infura_project_id
+
+relayers:
+  hosts:
+    relayer1:
+      ansible_host: relayer1.bridge.io
+      worker_private_key: "privkeystr"
+      worker_django_allowed_hosts: 127.0.0.1,relayer1.bridge.io
+      worker_eth_node_url: https://mainnet.infura.io/v3/infura_project_id
+    relayer2:
+      ansible_host: relayer2.bridge.io
+      worker_private_key: "privkeystr"
+      worker_django_allowed_hosts: 127.0.0.1,relayer2.bridge.io
+      worker_eth_node_url: https://mainnet.infura.io/v3/infura_project_id
+    
