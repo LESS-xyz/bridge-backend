@@ -55,7 +55,7 @@ def check_sign_count(swap):
 @transaction.atomic
 def relay(swap):
     try:
-        lock = NetworkLock.objects.select_for_update(nowait=True).get(network_num=swap.to_network_num)
+        lock = NetworkLock.objects.select_for_update(nowait=True).get_or_create(network_num=swap.to_network_num)
     except OperationalError:
         print('network locked')
         return
