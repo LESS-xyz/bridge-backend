@@ -14,6 +14,9 @@
       docker_compose:
         project_src: "{{ worker_home_path }}/multisig_bridge"
         files: docker-compose-relayer.yaml
+        build: yes
+        restarted: yes
+        state: present
 
     - name: Make migrations
       command: 
