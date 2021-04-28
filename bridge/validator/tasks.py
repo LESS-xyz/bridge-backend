@@ -2,7 +2,7 @@ import requests
 from celery import shared_task
 from validator_celery import app
 from bridge.validator.models import Swap
-from datetime import datetime
+from django.utils import timezone
 from bridge.settings import relayers, networks, CHANGE_RELAYER_TIMEOUT
 from django.db import transaction
 from django.db.utils import OperationalError
@@ -24,7 +24,7 @@ def send_sign_to_relayer(swap, relayer_list):
                 continue
             swap.relayer_ip = relayer
             swap.status = Swap.Status.SIGNATURE_SUBMITTED
-            swap.signature_submitted_at = datetime.now()
+            swap.signature_submitted_at = timezone.now()
             swap.save()
             break
         except Exception as e:
@@ -60,7 +60,7 @@ def check_sended_swap_status(swap):
     network = networks[swap.to_network_num]
     tx_hash_bytes = Web3.toBytes(hexstr=swap.from_tx_hash)
     is_processed = network.swap_contract.functions.isProcessedTransaction(tx_hash_bytes).call()
-    if (datetime.now() - swap.signature_submitted_at).seconds > CHANGE_RELAYER_TIMEOUT and not is_processed:
+    if (timezone.now() - swap.signature_submitted_at).seconds > CHANGE_RELAYER_TIMEOUT and not is_processed:
         relayer_list = relayers.pop(swap.relayer_url)
         send_sign_to_relayer(swap, relayer_list)
 

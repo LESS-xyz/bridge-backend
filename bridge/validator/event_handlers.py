@@ -3,7 +3,6 @@ from web3 import Web3
 from eth_account import Account, messages
 from bridge.validator.models import Swap
 from bridge.settings import relayers, secret
-from datetime import datetime
 from bridge.validator.tasks import check_swap
 
 

@@ -5,7 +5,7 @@ from bridge.settings import networks, secret
 from web3 import Web3
 from eth_account import Account, messages
 from web3.exceptions import TransactionNotFound
-from datetime import datetime
+from django.utils import timezone
 from django.db import transaction
 from django.db.utils import OperationalError
 
@@ -127,7 +127,7 @@ def relay(swap):
     tx_hex = tx_hash.hex()
 
     swap.to_tx_hash = tx_hex
-    swap.relayed_to_blockchain_at = datetime.now()
+    swap.relayed_to_blockchain_at = timezone.now()
     swap.status = Swap.Status.IN_MEMPOOL
     swap.save()
 
