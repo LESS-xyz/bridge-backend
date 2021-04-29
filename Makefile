@@ -1,5 +1,5 @@
 
-install_deps:
+setup_deps:
 	ansible-playbook -i=ansible/hosts.yml ansible/tasks/install-deps.yml
 
 setup_global:
