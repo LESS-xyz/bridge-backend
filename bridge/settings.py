@@ -4,6 +4,7 @@ import requests
 from munch import munchify
 from web3 import Web3, HTTPProvider
 from django.core.management.utils import get_random_secret_key
+from bridge.ERC20_ABI import ERC20_ABI
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -21,6 +22,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'bridge.validator',
     'bridge.relayer',
+    'bridge.bot',
 ]
 
 MIDDLEWARE = [
@@ -100,18 +102,38 @@ with open(os.path.dirname(__file__) + '/../config.yaml') as f:
 
 SECRET_KEY = get_random_secret_key()
 
-relayers = config_data['relayers']
+relayers = config_data.get('relayers', None)
 
-secret = config_data['private_key']
+secret = config_data.get('private_key', None)
+
+bot_token = config_data.get('bot_token', None)
 
 networks = {}
 for data in config_data['networks']:
     network = munchify(data)
+
     network.w3 = Web3(HTTPProvider(data['node']))
     network.swap_contract = network.w3.eth.contract(
         address=network.swap_contract_address,
         abi=config_data['swap_contract_abi']
     )
+    token_address = network.swap_contract.functions.tokenAddress().call()
+    token_contract = network.w3.eth.contract(
+        address=Web3.toChecksumAddress(token_address),
+        abi=ERC20_ABI,
+    )
+
+    token_dict = {
+        'decimals': token_contract.functions.decimals().call(),
+        'symbol': token_contract.functions.symbol().call()
+    }
+
+    network.token_contract = network.w3.eth.contract(
+        address=Web3.toChecksumAddress(token_address),
+        abi=ERC20_ABI,
+    )
+    network.token_decimals = token_contract.functions.decimals().call()
+    network.token_symbol = token_contract.functions.symbol().call()
     networks[network.num] = network
 
 print('settings loaded')
