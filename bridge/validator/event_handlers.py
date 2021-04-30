@@ -3,7 +3,8 @@ from web3 import Web3
 from eth_account import Account, messages
 from bridge.validator.models import Swap
 from bridge.settings import relayers, secret
-from bridge.validator.tasks import check_swap
+from bridge.validator.tasks import process_swap
+from django.db.utils import IntegrityError
 
 
 def deposit_event_handler(network, event):
@@ -34,6 +35,10 @@ def deposit_event_handler(network, event):
         amount=args.amount,
         signature=signature.signature.hex()[2:]
     )
-    swap.save()
 
-    check_swap.delay(swap.id)
+    try:
+        swap.save()
+    except IntegrityError:
+        pass
+
+    process_swap.delay(swap.id)

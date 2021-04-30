@@ -8,4 +8,4 @@ COPY requirements.txt /app/requirements.txt
 RUN pip install -r requirements.txt
 
 COPY . /app
-CMD ["python", "start_scanner.py"]
+CMD ["python", "start_validator_scanner.py"]

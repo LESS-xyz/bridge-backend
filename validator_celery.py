@@ -9,6 +9,6 @@ django.setup()
 app = Celery('validator_celery', broker='amqp://rabbit:rabbit@rabbitmq:5672/rabbit', include=['bridge.validator.tasks'])
 
 app.conf.beat_schedule['check_swaps'] = {
-    'task': 'bridge.validator.tasks.check_swaps',
+    'task': 'bridge.validator.tasks.route_swaps',
     'schedule': crontab(minute=f'*/1'),
 }

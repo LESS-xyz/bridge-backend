@@ -14,7 +14,7 @@ services:
     env_file: .env
     build:
       context: .
-      dockerfile: dockerfiles/scanner.Dockerfile
+      dockerfile: dockerfiles/validator_scanner.Dockerfile
     depends_on:
       - db
       - rabbitmq
