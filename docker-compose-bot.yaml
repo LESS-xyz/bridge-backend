@@ -9,13 +9,21 @@ services:
     restart: unless-stopped
     networks:
       multisig-bridge-bot:
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    env_file: .env
+    restart: unless-stopped
+    networks:
+      multisig-bridge-bot:
   scanner:
     env_file: .env
     build:
       context: .
-      dockerfile: dockerfiles/validator_scanner.Dockerfile
+      dockerfile: dockerfiles/bot_scanner.Dockerfile
     depends_on:
       - db
+      - celery
+      - rabbitmq
     volumes:
       - .:/app
     restart: unless-stopped
@@ -28,6 +36,19 @@ services:
       dockerfile: dockerfiles/bot.Dockerfile
     depends_on:
       - db
+    volumes:
+      - .:/app
+    restart: unless-stopped
+    networks:
+      multisig-bridge-bot:
+  celery:
+    env_file: .env
+    build:
+      context: .
+      dockerfile: dockerfiles/bot_celery.Dockerfile
+    depends_on:
+      - db
+      - rabbitmq
     volumes:
       - .:/app
     restart: unless-stopped
