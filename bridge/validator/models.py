@@ -66,6 +66,7 @@ class Swap(models.Model):
         data = is_processed_tx_func.call(block_identifier='pending')
         if data[0]:
             self.to_tx_hash = data[1].hex()
+            self.status = Swap.Status.SUCCESS
             self.save()
             return True
 
