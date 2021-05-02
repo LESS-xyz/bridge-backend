@@ -19,7 +19,7 @@ class Swap(models.Model):
         SENT_BY_ANOTHER_RELAYER = 'sent by another relayer'
         WAITING_FOR_SIGNATURES = 'waiting for signatures'
         WAITING_FOR_RELAY = 'waiting for relay'
-        IN_MEMPOOL = 'mempool'
+        IN_MEMPOOL = 'in mempool'
         PENDING = 'pending'
         SUCCESS = 'success'
         REVERT = 'revert'
@@ -105,9 +105,11 @@ class Swap(models.Model):
         network = networks[self.to_network_num]
         from_tx_hash_bytes = Web3.toBytes(hexstr=self.from_tx_hash)
         is_processed_tx_func = network.swap_contract.functions.isProcessedTransaction(from_tx_hash_bytes)
+        is_processed_tx_data = is_processed_tx_func.call(block_identifier='pending')
 
-        if is_processed_tx_func.call(block_identifier='pending')[0]:
+        if is_processed_tx_data[0]:
             self.status = Swap.Status.SENT_BY_ANOTHER_RELAYER
+            self.to_tx_hash = is_processed_tx_data[1].hex()
             self.save()
             print('(swap.relay) sent by another relayer')
             return False
@@ -134,7 +136,9 @@ class Swap(models.Model):
             else:
                 print(f'(swap.relay) invalid validator {signer_checksum}')
 
-        if len(validator_signs) < network.swap_contract.functions.minConfirmationSignatures().call():
+        min_confirmations =  network.swap_contract.functions.minConfirmationSignatures().call()
+
+        if len(validator_signs) < min_confirmations:
             print(f'(swap.relay) not enough signatures')
             return False
 
@@ -174,12 +178,14 @@ class Swap(models.Model):
         return True
 
     def check_relayed_tx_status(self):
-        if self.status not in (Swap.Status.IN_MEMPOOL, Swap.Status.PENDING):
+        if self.status not in (Swap.Status.IN_MEMPOOL, Swap.Status.PENDING) or not self.to_tx_hash:
             return
 
         try:
             receipt = networks[self.to_network_num].w3.eth.getTransactionReceipt(self.to_tx_hash)
         except TransactionNotFound:
+            self.status = Swap.Status.IN_MEMPOOL
+            self.save(update_fields=['status'])
             return
 
         try:
@@ -191,7 +197,7 @@ class Swap(models.Model):
                 self.status = Swap.Status.REVERT
         except KeyError:
             self.status = Swap.Status.IN_MEMPOOL
-        self.save()
+        self.save(update_fields=['status'])
 
 
 class Signature(models.Model):
