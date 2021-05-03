@@ -1,7 +1,6 @@
 from django.db import models
 from django.contrib.postgres.fields import ArrayField
 import requests
-import logging
 from django.utils import timezone
 from bridge.settings import networks, relayers
 from web3 import Web3
@@ -10,7 +9,6 @@ from web3 import Web3
 class Swap(models.Model):
     class Status(models.TextChoices):
         CREATED = 'created'
-        RELAYERS_OFFLINE = 'relayers_offline'
         SIGNATURE_SUBMITTED = 'signature submitted'
         SUCCESS = 'success'
 
@@ -31,16 +29,14 @@ class Swap(models.Model):
     signature_submitted_at = models.DateTimeField(null=True, default=None)
     signature_submitted_to = ArrayField(models.CharField(max_length=200), default=list)
 
-    def submit_signature_to_relayer(self):
+    def submit_signature_to_relayer(self, remaining_relayers):
         relayer_payload = {
             'signature': self.signature,
             'from_network_num': self.from_network_num,
             'from_tx_hash': self.from_tx_hash,
         }
 
-        relayers_list = [relayer for relayer in relayers if relayer not in self.signature_submitted_to]
-
-        for relayer in relayers_list:
+        for relayer in remaining_relayers:
             try:
                 response = requests.post('http://' + relayer + '/provide_signature/', json=relayer_payload)
                 if response.status_code != 200:
@@ -53,11 +49,8 @@ class Swap(models.Model):
                 print(f'(swap.send_signature_to_relayer): signature submitted to {relayer}')
                 break
             except Exception as e:
-                logging.info(repr(e))
+                print(repr(e))
                 pass
-        else:
-            self.status = Swap.Status.RELAYERS_OFFLINE
-            self.save(update_fields=['status'])
 
     def update_relay_tx_status(self):
         network = networks[self.to_network_num]

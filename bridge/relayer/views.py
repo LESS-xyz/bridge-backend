@@ -56,3 +56,7 @@ def is_signature_submitted(request):
 
     return Response(status=200)
 
+
+@api_view(http_method_names=['GET'])
+def is_online(request):
+    return Response(status=200)

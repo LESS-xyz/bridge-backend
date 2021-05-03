@@ -18,13 +18,26 @@ def process_swap(swap_id):
         print('swap model locked')
         return
 
-    if swap.status in (Swap.Status.RELAYERS_OFFLINE, Swap.Status.CREATED):
-        swap.submit_signature_to_relayer()
+    if swap.status == Swap.Status.CREATED:
+        remaining_relayers = get_remaining_relayers(swap)
+        swap.submit_signature_to_relayer(remaining_relayers)
     elif swap.status == Swap.Status.SIGNATURE_SUBMITTED:
-        is_relayed = swap.update_relay_tx_status()
         seconds_diff = (timezone.now() - swap.signature_submitted_at).seconds
-        if not is_relayed and seconds_diff > CHANGE_RELAYER_TIMEOUT:
-            swap.submit_signature_to_relayer()
+        if seconds_diff > CHANGE_RELAYER_TIMEOUT:
+            remaining_relayers = get_remaining_relayers(swap)
+            if remaining_relayers and swap.update_relay_tx_status():
+                swap.submit_signature_to_relayer(remaining_relayers)
+
+
+def get_remaining_relayers(swap):
+    result = []
+    for relayer in relayers:
+        if relayer not in swap.signature_submitted_to:
+            response = requests.get('http://' + relayer + '/is_online/')
+            if response.status_code == 200:
+                result += relayer
+
+    return result
 
 
 @shared_task
