@@ -6,6 +6,18 @@ import time
 from bridge.settings import MAX_FILTER_LENGTH
 
 
+def never_fall(func):
+    def wrapper(*args, **kwargs):
+        while True:
+            try:
+                func(*args, **kwargs)
+            except Exception as e:
+                print('\n'.join(traceback.format_exception(*sys.exc_info())), flush=True)
+                time.sleep(60)
+
+    return wrapper
+
+
 class Scanner(threading.Thread):
     def __init__(self, network, event_names, event_handlers):
         super().__init__()
@@ -13,55 +25,51 @@ class Scanner(threading.Thread):
         self.network = network
         self.events = [getattr(self.network.swap_contract.events, event_name)() for event_name in event_names]
 
-    def run(self):
+        dir_path = os.path.join(os.path.dirname(__file__), 'block_numbers')
+
+        try:
+            os.makedirs(dir_path)
+        except FileExistsError:
+            pass
+
+        self.block_file_path = os.path.join(dir_path, self.network.name)
+
+    @never_fall
+    def start_polling(self):
+        min_confirmations = self.network.swap_contract.functions.minConfirmationBlocks().call()
+
+        try:
+            with open(self.block_file_path) as f:
+                last_block_processed = int(f.read())
+        except:
+            last_block_processed = self.network.w3.eth.block_number - min_confirmations - 1
+
         while True:
-            try:
-                dir_path = os.path.join(os.path.dirname(__file__), 'block_numbers')
+            last_block_confirmed = self.network.w3.eth.block_number - min_confirmations
+            if last_block_processed >= last_block_confirmed:
+                print(self.network.name + ': waiting for blocks...')
+                time.sleep(10)
+                continue
 
-                try:
-                    os.makedirs(dir_path)
-                except FileExistsError:
-                    pass
+            if last_block_confirmed - last_block_processed > MAX_FILTER_LENGTH:
+                to_block = last_block_processed + MAX_FILTER_LENGTH
+            else:
+                to_block = last_block_confirmed
 
-                block_file_path = os.path.join(dir_path, self.network.name)
+            print(self.network.name + ': scanning...')
 
-                try:
-                    with open(block_file_path) as f:
-                        last_block_processed = int(f.read())
-                except Exception:
-                    last_block_processed = self.network.w3.eth.block_number - 1
+            for event, handler in zip(self.events, self.handlers):
+                event_filter = event.createFilter(fromBlock=last_block_processed + 1, toBlock=to_block)
+                events = event_filter.get_all_entries()
+                for event_data in events:
+                    handler(self.network, event_data)
 
-                min_confirmations = self.network.swap_contract.functions.minConfirmationBlocks().call()
+            last_block_processed = to_block
 
-                while True:
-                    current_block = self.network.w3.eth.block_number - min_confirmations
-                    if last_block_processed >= current_block:
-                        print(self.network.name + ': waiting for blocks...')
-                        time.sleep(10)
-                        continue
+            with open(self.block_file_path, 'w') as f:
+                f.write(str(last_block_processed))
 
-                    if current_block - last_block_processed > MAX_FILTER_LENGTH:
-                        to_block = last_block_processed + MAX_FILTER_LENGTH
-                    else:
-                        to_block = current_block
+            time.sleep(10)
 
-                    print(self.network.name + ': scanning...')
-
-                    for event, handler in zip(self.events, self.handlers):
-                        event_filter = event.createFilter(fromBlock=last_block_processed + 1, toBlock=to_block)
-                        events = event_filter.get_all_entries()
-                        for event_data in events:
-                            handler(self.network, event_data)
-
-                        time.sleep(1)
-
-                    last_block_processed = to_block
-
-                    with open(block_file_path, 'w') as f:
-                        f.write(str(last_block_processed))
-
-                    time.sleep(10)
-
-            except Exception as e:
-                print('\n'.join(traceback.format_exception(*sys.exc_info())), flush=True)
-                time.sleep(30)
+    def run(self):
+        self.start_polling()
