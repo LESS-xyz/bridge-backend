@@ -1,0 +1,8 @@
+- name: Build and deploy all nodes
+  hosts: all
+  vars_files:
+  - "../../vars/environment.yml"
+
+  tasks:
+    - import_tasks: ../compose-tasks.yml
+      

@@ -37,6 +37,8 @@ And modify accordingly:
 
 #### Deploying commands
 
+### Initial configuration
+
 Setup dependencies
 
 ```
@@ -49,26 +51,58 @@ Configure global settings
 make setup_global
 ```
 
-Run relayer nodes
+---
+
+### Setup node and run it
+
+Configure and run relayer nodes
 
 ```
 make setup_relayer
 ```
 
-Run validator nodes
+Configure and run validator nodes
 
 ```
 make setup_validator
 ```
 
-Update relayer nodes
+Configure and run bot nodes
+
+```
+make setup_bot
+```
+
+Configure and run all nodes
+
+```
+make setup_all
+```
+
+---
+
+### Update node and restart it
+
+Update and restart relayer nodes
 
 ```
 make update_relayer
 ```
 
-Update validator nodes
+Update and restart validator nodes
 
 ```
 make update_validator
+```
+
+Update and restart bot nodes
+
+```
+make update_bot
+```
+
+Update and restart all nodes
+
+```
+make update_all
 ```

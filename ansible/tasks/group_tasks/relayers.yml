@@ -1,0 +1,7 @@
+- name: Build and deploy relayer node
+  hosts: relayers
+  vars_files:
+  - "../../vars/environment.yml"
+
+  tasks:
+    - import_tasks: ../compose-tasks.yml

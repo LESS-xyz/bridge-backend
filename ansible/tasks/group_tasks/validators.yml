@@ -1,0 +1,7 @@
+- name: Build and deploy validator node
+  hosts: validators
+  vars_files:
+  - "../../vars/environment.yml"
+
+  tasks:
+    - import_tasks: ../compose-tasks.yml
