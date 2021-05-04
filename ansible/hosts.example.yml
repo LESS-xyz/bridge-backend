@@ -32,3 +32,11 @@ relayers:
       worker_django_allowed_hosts: 127.0.0.1,relayer2.bridge.io
       worker_eth_node_url: https://mainnet.infura.io/v3/infura_project_id
     
+bots:
+  hosts:
+    bot1:
+      ansible_host: bot.bridge.io
+      worker_private_key: "privkeystr"
+      worker_django_allowed_hosts: 127.0.0.1,bot1.bridge.io
+      worker_eth_node_url: https://mainnet.infura.io/v3/infura_project_id
+      bot_token: "asdf"
