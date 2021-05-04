@@ -21,5 +21,8 @@ relayers:
   {{ relayers }}
 {% endif %}
 
+{% if worker_private_key is defined  %}
 private_key: '{{ worker_private_key }}'
+{% endif %}
+
 swap_contract_abi: '{{ swap_contract_abi }}'
