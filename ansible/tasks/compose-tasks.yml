@@ -10,7 +10,6 @@
     project_src: "{{ worker_home_path }}/multisig_bridge"
     files: "{{ docker_compose_file }}"
     build: yes
-    restarted: yes
     state: present
 
 - name: Make migrations (relayer)
@@ -45,5 +44,6 @@
   docker_compose:
     project_src: "{{ worker_home_path }}/multisig_bridge"
     files: "{{ docker_compose_file }}"
-    restarted: yes
+    build: yes
+    state: present
       
