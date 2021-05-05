@@ -14,9 +14,6 @@ def deposit_event_handler(network, event):
     deposit_tx_hash_bytes = event.transactionHash
     amount = args.amount
 
-    print(network.name)
-    print(recipient_address, deposit_tx_hash_bytes, amount)
-
     keccak_hex = Web3.solidityKeccak(
         ['address', 'uint256', 'bytes32'],
         [recipient_address, amount, deposit_tx_hash_bytes]
@@ -24,7 +21,6 @@ def deposit_event_handler(network, event):
 
     message_to_sign = messages.encode_defunct(hexstr=keccak_hex)
     signature = Account.sign_message(message_to_sign, private_key=secret)
-    print(signature.signature.hex())
 
     swap = Swap(
         from_tx_hash=deposit_tx_hash_bytes.hex(),
