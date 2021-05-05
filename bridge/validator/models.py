@@ -4,6 +4,7 @@ import requests
 from django.utils import timezone
 from bridge.settings import networks, relayers
 from web3 import Web3
+from requests.exceptions import RequestException
 
 
 class Swap(models.Model):
@@ -48,7 +49,7 @@ class Swap(models.Model):
                 self.save()
                 print(f'(swap.send_signature_to_relayer): signature submitted to {relayer}')
                 break
-            except Exception as e:
+            except RequestException as e:
                 print(repr(e))
                 pass
 
