@@ -12,6 +12,19 @@ class NetworkLock(models.Model):
     network_num = models.IntegerField()
 
 
+def is_network_locked(network_num):
+    try:
+        NetworkLock.objects.select_for_update().get_or_create(network_num=network_num)
+
+        pending_swaps = Swap.objects.filter(
+            to_network_num=network_num,
+            status__in=(Swap.Status.IN_MEMPOOL, Swap.Status.PENDING)
+        )
+        return bool(pending_swaps.count())
+    except OperationalError:
+        return True
+
+
 class Swap(models.Model):
     class Status(models.TextChoices):
         WAITING_FOR_VALIDATION = 'waiting for validation'
@@ -40,7 +53,23 @@ class Swap(models.Model):
     amount = models.DecimalField(max_digits=100, decimal_places=0, null=True, default=None)
     relayed_to_blockchain_at = models.DateTimeField(null=True, default=None)
 
+    def check_if_hash_processed(self):
+        from_tx_hash_bytes = Web3.toBytes(hexstr=self.from_tx_hash)
+        func = networks[self.to_network_num].swap_contract.functions.isProcessedTransaction(from_tx_hash_bytes)
+        is_processed, tx_hash_bytes = func.call(block_identifier='pending')
+
+        if is_processed:
+            self.status = Swap.Status.SENT_BY_ANOTHER_RELAYER
+            self.to_tx_hash = tx_hash_bytes.hex()
+            self.save()
+
+        return is_processed
+
+    def print_log(self, text):
+        print(f'{self.from_tx_hash} ({self.pk}): {text}')
+
     def validate_deposit(self):
+        self.print_log('start validation')
         from_network = networks[self.from_network_num]
 
         try:
@@ -66,15 +95,18 @@ class Swap(models.Model):
         self.status = Swap.Status.WAITING_FOR_SIGNATURES
         self.save()
 
+        self.print_log('validation success')
+
         return True
 
     def check_if_signatures_enough(self):
+        self.print_log('check if signatures enough')
         signs = Signature.objects.filter(swap=self)
 
         network = networks[self.to_network_num]
         min_confimations = network.swap_contract.functions.minConfirmationSignatures().call()
         signs_count = signs.count()
-        print(f'(swap.check_if_signatures_enough): {signs_count} / {min_confimations} ')
+        self.print_log(f'{signs_count} / {min_confimations} signatures')
 
         if signs_count >= min_confimations:
             self.status = Swap.Status.WAITING_FOR_RELAY
@@ -84,71 +116,42 @@ class Swap(models.Model):
         return False
 
     def relay(self):
+        self.print_log('start relaying')
         if self.status != Swap.Status.WAITING_FOR_RELAY:
-            print('(swap.relay) invalid status')
-            return False
-        try:
-            lock = NetworkLock.objects.select_for_update(nowait=True).get_or_create(network_num=self.to_network_num)
-        except OperationalError:
-            print('(swap.relay) network locked')
-            return False
+            return
 
-        pending_swaps = Swap.objects.filter(
-            to_network_num=self.to_network_num,
-            status__in=(Swap.Status.IN_MEMPOOL, Swap.Status.PENDING)
-        )
+        if is_network_locked(self.to_network_num):
+            self.print_log('relaying postponed due to locked network')
+            return
 
-        if pending_swaps.count():
-            print('(swap.relay) network locked')
-            return False
+        if self.check_if_hash_processed():
+            self.print_log('processed by another relayer')
+            return
 
         network = networks[self.to_network_num]
-        from_tx_hash_bytes = Web3.toBytes(hexstr=self.from_tx_hash)
-        is_processed_tx_func = network.swap_contract.functions.isProcessedTransaction(from_tx_hash_bytes)
-        is_processed_tx_data = is_processed_tx_func.call(block_identifier='pending')
-
-        if is_processed_tx_data[0]:
-            self.status = Swap.Status.SENT_BY_ANOTHER_RELAYER
-            self.to_tx_hash = is_processed_tx_data[1].hex()
-            self.save()
-            print('(swap.relay) sent by another relayer')
-            return False
-
-        signs = Signature.objects.filter(swap=self)
-        amount = int(self.amount)
-
-        to_address_checksum = Web3.toChecksumAddress(self.to_address)
-
-        validator_signs = []
-        for sign in signs:
-            keccak_hex = Web3.solidityKeccak(
-                ['address', 'uint256', 'bytes32'],
-                [to_address_checksum, amount, from_tx_hash_bytes]
-            ).hex()
-
-            message_to_sign = messages.encode_defunct(hexstr=keccak_hex)
-
-            signer = Account.recover_message(message_to_sign, signature=sign.signature)
-            signer_checksum = Web3.toChecksumAddress(signer)
-
-            if network.swap_contract.functions.isValidator(signer_checksum).call():
-                validator_signs.append(sign.signature)
-            else:
-                print(f'(swap.relay) invalid validator {signer_checksum}')
-
-        min_confirmations =  network.swap_contract.functions.minConfirmationSignatures().call()
-
-        if len(validator_signs) < min_confirmations:
-            print(f'(swap.relay) not enough signatures')
-            return False
+        contract_address = network.swap_contract.address
+        if network.token_contract.functions.balanceOf(contract_address).call() < self.amount:
+            self.print_log('insufficient token balance')
+            return
 
         gas_price = network.w3.eth.gasPrice
         max_gas_price = network.swap_contract.functions.maxGasPrice().call()
         if gas_price > max_gas_price:
-            print(f'(swap.relay) high gas price: {gas_price} > {max_gas_price}')
+            self.print_log(f'high gas price {gas_price} > {max_gas_price}')
             return
 
         relayer_address = Account.from_key(secret).address
+
+        if network.w3.eth.get_balance(relayer_address) < gas_price * 300_000:
+            self.print_log('insufficient balance')
+            return
+
+        validator_signs = self.verified_validator_signs()
+        min_confirmations = network.swap_contract.functions.minConfirmationSignatures().call()
+
+        if len(validator_signs) < min_confirmations:
+            self.print_log('not enough signatures')
+            return
 
         tx_params = {
             'nonce': network.w3.eth.getTransactionCount(relayer_address, 'pending'),
@@ -159,23 +162,21 @@ class Swap(models.Model):
         combined_signatures = '0x' + ''.join(validator_signs)
 
         func = network.swap_contract.functions.transferToUserWithFee(
-            to_address_checksum,
-            amount,
-            from_tx_hash_bytes,
+            Web3.toChecksumAddress(self.to_address),
+            int(self.amount),
+            Web3.toBytes(hexstr=self.from_tx_hash),
             Web3.toBytes(hexstr=combined_signatures)
         )
         initial_tx = func.buildTransaction(tx_params)
         signed_tx = network.w3.eth.account.sign_transaction(initial_tx, secret).rawTransaction
         tx_hash = network.w3.eth.sendRawTransaction(signed_tx).hex()
 
-        print(f'(swap.relay) tx hash: {tx_hash}')
+        self.print_log(f'relay hash {tx_hash}')
 
         self.to_tx_hash = tx_hash
         self.relayed_to_blockchain_at = timezone.now()
         self.status = Swap.Status.IN_MEMPOOL
         self.save()
-
-        return True
 
     def check_relayed_tx_status(self):
         if self.status not in (Swap.Status.IN_MEMPOOL, Swap.Status.PENDING) or not self.to_tx_hash:
@@ -198,6 +199,28 @@ class Swap(models.Model):
         except KeyError:
             self.status = Swap.Status.IN_MEMPOOL
         self.save(update_fields=['status'])
+
+    def verified_validator_signs(self):
+        result = []
+        signs = Signature.objects.filter(swap=self)
+
+        network = networks[self.to_network_num]
+        for sign in signs:
+            keccak_hex = Web3.solidityKeccak(
+                ['address', 'uint256', 'bytes32'],
+                [Web3.toChecksumAddress(self.to_address), int(self.amount), Web3.toBytes(hexstr=self.from_tx_hash)]
+            ).hex()
+
+            message_to_sign = messages.encode_defunct(hexstr=keccak_hex)
+            signer = Account.recover_message(message_to_sign, signature=sign.signature)
+            signer_checksum = Web3.toChecksumAddress(signer)
+
+            if network.swap_contract.functions.isValidator(signer_checksum).call():
+                result.append(sign.signature)
+            else:
+                self.print_log('invalid validator ' + signer_checksum)
+
+        return result
 
 
 class Signature(models.Model):
