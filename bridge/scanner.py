@@ -34,6 +34,9 @@ class Scanner(threading.Thread):
 
         self.block_file_path = os.path.join(dir_path, self.network.name)
 
+    def print_log(self, text):
+        print(f'{self.network.name}: {text}')
+
     @never_fall
     def start_polling(self):
         min_confirmations = self.network.swap_contract.functions.minConfirmationBlocks().call()
@@ -47,7 +50,7 @@ class Scanner(threading.Thread):
         while True:
             last_block_confirmed = self.network.w3.eth.block_number - min_confirmations
             if last_block_processed >= last_block_confirmed:
-                print(self.network.name + ': waiting for blocks...')
+                self.print_log('waiting for blocks...')
                 time.sleep(10)
                 continue
 
@@ -56,12 +59,15 @@ class Scanner(threading.Thread):
             else:
                 to_block = last_block_confirmed
 
-            print(self.network.name + ': scanning...')
+            from_block = last_block_processed + 1
+
+            self.print_log(f'scanning [{from_block}, {to_block}] / {last_block_confirmed}')
 
             for event, handler in zip(self.events, self.handlers):
-                event_filter = event.createFilter(fromBlock=last_block_processed + 1, toBlock=to_block)
+                event_filter = event.createFilter(fromBlock=from_block, toBlock=to_block)
                 events = event_filter.get_all_entries()
                 for event_data in events:
+                    self.print_log(f'event received {event_data}')
                     handler(self.network, event_data)
 
             last_block_processed = to_block
@@ -69,7 +75,7 @@ class Scanner(threading.Thread):
             with open(self.block_file_path, 'w') as f:
                 f.write(str(last_block_processed))
 
-            time.sleep(10)
+            time.sleep(30)
 
     def run(self):
         self.start_polling()
