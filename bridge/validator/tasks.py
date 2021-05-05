@@ -6,6 +6,7 @@ from django.utils import timezone
 from bridge.settings import relayers, CHANGE_RELAYER_TIMEOUT
 from django.db import transaction
 from django.db.utils import OperationalError
+from requests.exceptions import RequestException
 
 
 @app.task
@@ -25,7 +26,7 @@ def process_swap(swap_id):
         seconds_diff = (timezone.now() - swap.signature_submitted_at).seconds
         if seconds_diff > CHANGE_RELAYER_TIMEOUT:
             remaining_relayers = get_remaining_relayers(swap)
-            if remaining_relayers and swap.update_relay_tx_status():
+            if remaining_relayers and not swap.update_relay_tx_status():
                 swap.submit_signature_to_relayer(remaining_relayers)
 
 
@@ -33,9 +34,12 @@ def get_remaining_relayers(swap):
     result = []
     for relayer in relayers:
         if relayer not in swap.signature_submitted_to:
-            response = requests.get('http://' + relayer + '/is_online/')
-            if response.status_code == 200:
-                result += relayer
+            try:
+                response = requests.get('http://' + relayer + '/is_online/')
+                if response.status_code == 200:
+                    result.append(relayer)
+            except RequestException:
+                pass
 
     return result
 
