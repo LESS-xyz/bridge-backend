@@ -97,6 +97,8 @@ MAX_FILTER_LENGTH = 50
 
 CHANGE_RELAYER_TIMEOUT = 5 * 60
 
+MEMPOOL_TIMEOUT = 3 * 60
+
 with open(os.path.dirname(__file__) + '/../config.yaml') as f:
     config_data = yaml.safe_load(f)
 
