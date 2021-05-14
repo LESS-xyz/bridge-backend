@@ -5,6 +5,11 @@
     files: "{{ docker_compose_file }}"
     state: absent
 
+- name: Prune unused Docker files (images, containers, networks)
+  command:
+    cmd: >
+      docker system prune -a -f
+
 - name: Create and start services
   docker_compose:
     project_src: "{{ worker_home_path }}/multisig_bridge"
